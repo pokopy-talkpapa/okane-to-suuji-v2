@@ -524,12 +524,13 @@
       el.innerHTML = '<span class="emptyCoins">０まい</span>';
       return;
     }
-    // coinArea(200px) - padding(4px*2) = 192px に収まるようサイズを動的計算
-    const AREA_H = 192;
-    const COL_GAP = 2;
+    const COIN_SIZE = 40;
+    const AREA_H = 192; // coinArea(200px) - padding(4px*2)
     const colLen = Math.min(count, 5);
-    const maxSize = Math.floor((AREA_H - (colLen - 1) * COL_GAP) / colLen);
-    const coinSize = Math.min(40, Math.max(22, maxSize));
+    // 収まらない場合はコインを重ねる（サイズは変えない）
+    const overlapPerCoin = colLen > 1
+      ? Math.ceil(Math.max(0, colLen * COIN_SIZE - AREA_H) / (colLen - 1))
+      : 0;
 
     const group = document.createElement('div');
     group.className = 'coinGroup';
@@ -537,13 +538,15 @@
       if (n === 0) return;
       const col = document.createElement('div');
       col.className = 'coinCol';
+      col.style.gap = '0';
       for (let i = 0; i < n; i++) {
         const img = document.createElement('img');
         img.className = 'coinImg';
         img.src = coinSrc;
         img.alt = '';
-        img.style.width = coinSize + 'px';
-        img.style.height = coinSize + 'px';
+        if (i > 0) {
+          img.style.marginTop = (overlapPerCoin > 0 ? -overlapPerCoin : 2) + 'px';
+        }
         if (onRemove) {
           img.classList.add('removable');
           img.addEventListener('click', onRemove);

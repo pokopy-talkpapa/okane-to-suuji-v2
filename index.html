@@ -94,7 +94,7 @@
   }
 
   /* コインエリア */
-  .coinArea { height:200px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; overflow:hidden; }
+  .coinArea { height:220px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; overflow:hidden; }
   .coinGroup { display:flex; gap:4px; align-items:flex-end; width:84px; }
   .coinCol { display:flex; flex-direction:column-reverse; align-items:center; gap:2px; width:40px; flex-shrink:0; }
   .coinImg { width:40px; height:40px; object-fit:contain; user-select:none; flex-shrink:0; }
@@ -524,25 +524,17 @@
       el.innerHTML = '<span class="emptyCoins">０まい</span>';
       return;
     }
-    // コインは常に固定ステップで積み上がる（1枚目から重なる・サイズ・間隔は変化しない）
-    // STEP=19px → 9枚で 40+19×8=192px ちょうどエリアに収まる
-    const COIN_SIZE = 40;
-    const STEP = 19;
-    const OVERLAP = COIN_SIZE - STEP; // = 21px 常に重なる量
-
     const group = document.createElement('div');
     group.className = 'coinGroup';
     [Math.min(count, 5), Math.max(0, count - 5)].forEach(n => {
       if (n === 0) return;
       const col = document.createElement('div');
       col.className = 'coinCol';
-      col.style.gap = '0';
       for (let i = 0; i < n; i++) {
         const img = document.createElement('img');
         img.className = 'coinImg';
         img.src = coinSrc;
         img.alt = '';
-        if (i > 0) img.style.marginTop = `-${OVERLAP}px`;
         if (onRemove) {
           img.classList.add('removable');
           img.addEventListener('click', onRemove);

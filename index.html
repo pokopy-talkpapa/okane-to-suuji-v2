@@ -547,9 +547,51 @@
   document.getElementById('m1DoneBtn').addEventListener('click', () => handleDone('mode1'));
   document.getElementById('m2DoneBtn').addEventListener('click', () => handleDone('mode2'));
 
-  // showNumberLine は Task 6 で実装。スタブを置く
+  // ===== Task 6: 数直線アニメーション + 次問題 =====
+
   function showNumberLine(nlId, barId, valueId, value) {
-    // Task 6 で実装
+    const nlEl  = document.getElementById(nlId);
+    const barEl = document.getElementById(barId);
+    const valEl = document.getElementById(valueId);
+
+    // バーをリセット（transition なしで 0 に）
+    barEl.style.transition = 'none';
+    barEl.style.width = '0%';
+    nlEl.classList.add('visible');
+    valEl.textContent = '';
+
+    // 1フレーム待ってから transition 付きで伸ばす
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      barEl.style.transition = 'width 0.5s ease-out';
+      barEl.style.width = (value / 1000 * 100).toFixed(2) + '%';
+      valEl.textContent = value + 'えん';
+    }));
+
+    // 1.5秒後に次問題
+    setTimeout(() => {
+      nlEl.classList.remove('visible');
+      barEl.style.transition = 'none';
+      barEl.style.width = '0%';
+      nextProblem();
+    }, 1500);
+  }
+
+  function nextProblem() {
+    const prev = targetNum;
+    targetNum = generateProblem(prev);
+
+    if (currentMode === 'mode1') {
+      userCoins = { h: 0, t: 0, o: 0 };
+      document.getElementById('m1ProblemNum').textContent = targetNum;
+      document.getElementById('m1Result').textContent = '';
+      document.getElementById('m1Result').className = 'result';
+      renderMode1();
+    } else {
+      userDigits = { h: 0, t: 0, o: 0 };
+      document.getElementById('m2Result').textContent = '';
+      document.getElementById('m2Result').className = 'result';
+      renderMode2();
+    }
   }
 </script>
 </body>

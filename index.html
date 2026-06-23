@@ -105,10 +105,10 @@
   }
 
   /* コインエリア */
-  .coinArea { min-height:80px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; }
-  .coinGroup { display:flex; gap:6%; justify-content:center; align-items:flex-end; }
-  .coinCol { display:flex; flex-direction:column-reverse; align-items:center; gap:3px; flex:0 0 46%; }
-  .coinImg { width:100%; max-width:54px; object-fit:contain; user-select:none; pointer-events:none; }
+  .coinArea { height:190px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; overflow:visible; }
+  .coinGroup { display:flex; gap:4px; justify-content:center; align-items:flex-end; }
+  .coinCol { display:flex; flex-direction:column-reverse; align-items:center; gap:2px; width:38px; flex-shrink:0; }
+  .coinImg { width:34px; height:34px; object-fit:contain; user-select:none; pointer-events:none; flex-shrink:0; }
   .emptyCoins { color:#bbb; font-size:.85rem; border:2px dashed #ccc; border-radius:10px; padding:5px 8px; }
 
   /* mode1: +/- ボタン */
@@ -554,26 +554,77 @@
     const barEl = document.getElementById(barId);
     const valEl = document.getElementById(valueId);
 
-    // バーをリセット（transition なしで 0 に）
+    // 数直線を先に表示（コインが飛ぶ先の位置を取得するため）
     barEl.style.transition = 'none';
     barEl.style.width = '0%';
     nlEl.classList.add('visible');
     valEl.textContent = '';
 
-    // 1フレーム待ってから transition 付きで伸ばす
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      barEl.style.transition = 'width 0.5s ease-out';
-      barEl.style.width = (value / 1000 * 100).toFixed(2) + '%';
-      valEl.textContent = value + 'えん';
-    }));
+    const trackEl = nlEl.querySelector('.nlTrack');
+    const trackRect = trackEl.getBoundingClientRect();
+    const targetX = trackRect.left + trackRect.width * (value / 1000);
+    const targetY = trackRect.top + trackRect.height / 2;
 
-    // 1.5秒後に次問題
-    setTimeout(() => {
-      nlEl.classList.remove('visible');
-      barEl.style.transition = 'none';
-      barEl.style.width = '0%';
-      nextProblem();
-    }, 1500);
+    // 現在のモードのコイン画像を収集
+    const coinAreaIds = currentMode === 'mode1'
+      ? ['m1CoinsH', 'm1CoinsT', 'm1CoinsO']
+      : ['m2CoinsH', 'm2CoinsT', 'm2CoinsO'];
+
+    const coinImages = coinAreaIds.flatMap(id =>
+      Array.from(document.querySelectorAll(`#${id} .coinImg`))
+    );
+
+    function growBar() {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        barEl.style.transition = 'width 0.5s ease-out';
+        barEl.style.width = (value / 1000 * 100).toFixed(2) + '%';
+        valEl.textContent = value + 'えん';
+      }));
+      setTimeout(() => {
+        nlEl.classList.remove('visible');
+        barEl.style.transition = 'none';
+        barEl.style.width = '0%';
+        nextProblem();
+      }, 800);
+    }
+
+    if (coinImages.length === 0) {
+      growBar();
+      return;
+    }
+
+    // コインのクローンを飛ばしてからバーを伸ばす
+    let arrived = 0;
+    coinImages.forEach((img, i) => {
+      const rect = img.getBoundingClientRect();
+      const clone = document.createElement('img');
+      clone.src = img.src;
+      clone.style.cssText = [
+        'position:fixed', 'pointer-events:none', 'z-index:200',
+        `left:${rect.left}px`, `top:${rect.top}px`,
+        `width:${rect.width}px`, `height:${rect.height}px`,
+      ].join(';');
+      document.body.appendChild(clone);
+
+      setTimeout(() => {
+        clone.style.transition = [
+          'left 0.35s ease-in',
+          'top 0.35s ease-in',
+          'transform 0.35s ease-in',
+          'opacity 0.25s ease-in 0.12s',
+        ].join(',');
+        clone.style.left      = targetX + 'px';
+        clone.style.top       = targetY + 'px';
+        clone.style.transform = 'scale(0.1)';
+        clone.style.opacity   = '0';
+      }, i * 28);
+
+      setTimeout(() => {
+        clone.remove();
+        arrived++;
+        if (arrived === coinImages.length) growBar();
+      }, i * 28 + 400);
+    });
   }
 
   function nextProblem() {

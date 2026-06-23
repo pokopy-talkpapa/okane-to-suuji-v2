@@ -283,6 +283,52 @@
 
       <!-- mode2: おかね→すうじ（Task 4 で追加） -->
       <div id="mode2Screen" style="display:none">
+        <table class="place">
+          <thead>
+            <tr>
+              <th class="h">百のくらい</th>
+              <th class="t">十のくらい</th>
+              <th class="o">一のくらい</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="h"><div class="coinArea" id="m2CoinsH"></div></td>
+              <td class="t"><div class="coinArea" id="m2CoinsT"></div></td>
+              <td class="o"><div class="coinArea" id="m2CoinsO"></div></td>
+            </tr>
+            <tr>
+              <td class="h">
+                <div class="spinner">
+                  <button class="spinBtn" data-place="h" data-delta="1">▲</button>
+                  <div class="spinDigit" id="m2DigitH">0</div>
+                  <button class="spinBtn" data-place="h" data-delta="-1">▼</button>
+                </div>
+              </td>
+              <td class="t">
+                <div class="spinner">
+                  <button class="spinBtn" data-place="t" data-delta="1">▲</button>
+                  <div class="spinDigit" id="m2DigitT">0</div>
+                  <button class="spinBtn" data-place="t" data-delta="-1">▼</button>
+                </div>
+              </td>
+              <td class="o">
+                <div class="spinner">
+                  <button class="spinBtn" data-place="o" data-delta="1">▲</button>
+                  <div class="spinDigit" id="m2DigitO">0</div>
+                  <button class="spinBtn" data-place="o" data-delta="-1">▼</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="doneBtn" id="m2DoneBtn" type="button">できた！</button>
+        <div class="resultArea"><div class="result" id="m2Result"></div></div>
+        <div class="numberLine" id="m2NumberLine">
+          <div class="nlTrack"><div class="nlBar" id="m2NlBar"></div></div>
+          <div class="nlLabels"><span>0</span><span>500</span><span>1000</span></div>
+          <div class="nlValue" id="m2NlValue"></div>
+        </div>
       </div>
     </div>
 
@@ -405,6 +451,13 @@
       document.getElementById('m1NumberLine').classList.remove('visible');
       renderMode1();
     }
+    if (mode === 'mode2') {
+      userDigits = { h: 0, t: 0, o: 0 };
+      document.getElementById('m2Result').textContent = '';
+      document.getElementById('m2Result').className = 'result';
+      document.getElementById('m2NumberLine').classList.remove('visible');
+      renderMode2();
+    }
   }
 
   // mode1: +/- ボタン
@@ -417,6 +470,26 @@
       userCoins[place] = next;
       playTap();
       renderMode1();
+    });
+  });
+
+  function renderMode2() {
+    const digits = splitDigits(targetNum);
+    renderCoinArea(document.getElementById('m2CoinsH'), COIN_SRC.h, digits.h);
+    renderCoinArea(document.getElementById('m2CoinsT'), COIN_SRC.t, digits.t);
+    renderCoinArea(document.getElementById('m2CoinsO'), COIN_SRC.o, digits.o);
+    document.getElementById('m2DigitH').textContent = userDigits.h;
+    document.getElementById('m2DigitT').textContent = userDigits.t;
+    document.getElementById('m2DigitO').textContent = userDigits.o;
+  }
+
+  document.querySelectorAll('#mode2Screen .spinBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const place = btn.dataset.place;
+      const delta = parseInt(btn.dataset.delta, 10);
+      userDigits[place] = (userDigits[place] + delta + 10) % 10;
+      playTap();
+      document.getElementById(`m2Digit${place.toUpperCase()}`).textContent = userDigits[place];
     });
   });
 

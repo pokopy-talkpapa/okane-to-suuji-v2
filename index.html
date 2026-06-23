@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>おかねとすうじ</title>
+<style>
+  :root {
+    --bg: #f7f7f7;
+    --panel: #ffffff;
+    --shadow: 0 8px 20px rgba(0,0,0,.10);
+    --radius: 16px;
+    --dark: #111;
+    --ok: #0f8a2b;
+    --ng: #e0453a;
+    --line: #222;
+
+    /* 列カラー */
+    --h-bg: #fff3e0; --h-fg: #e65100;
+    --t-bg: #e3f2fd; --t-fg: #1565c0;
+    --o-bg: #fce4ec; --o-fg: #c62828;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 12px; }
+  .panel {
+    background: var(--panel);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 12px 20px;
+  }
+
+  /* タイトル行 */
+  .titleRow { position:relative; min-height:44px; margin-bottom:14px; }
+  .title { font-weight:950; font-size:20px; margin:0; text-align:center; line-height:44px; }
+  .soundBtn {
+    position:absolute; right:0; top:0;
+    border:0; border-radius:14px;
+    display:inline-flex; align-items:center; gap:6px;
+    padding:10px 12px; font-size:14px; font-weight:900;
+    cursor:pointer; background:#f1f1f1; color:var(--dark); line-height:1;
+  }
+  .soundBtn.off { background:#e9e9e9; color:#666; }
+
+  /* ===== スタート画面 ===== */
+  .startScreen {
+    display:flex; flex-direction:column; align-items:center;
+    padding:24px 16px 36px; gap:18px;
+  }
+  .startMsg { margin:0; font-size:1.05rem; font-weight:700; color:#555; text-align:center; }
+  .howto {
+    width:100%; background:#f5f7fa; border-radius:14px;
+    padding:14px 16px; display:flex; flex-direction:column; gap:10px;
+  }
+  .howto-title { font-size:0.8rem; font-weight:700; color:#888; letter-spacing:.06em; margin:0; }
+  .howto-steps { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .howto-steps li { display:flex; align-items:flex-start; gap:10px; font-size:0.9rem; line-height:1.5; color:#333; }
+  .howto-num {
+    flex-shrink:0; width:22px; height:22px; border-radius:50%;
+    background:var(--dark); color:#fff;
+    font-size:0.75rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    margin-top:1px;
+  }
+  .modeButtons { display:flex; flex-direction:column; gap:12px; width:100%; }
+  .modeBtn {
+    border:0; border-radius:16px; font-weight:950; cursor:pointer;
+    padding:18px 20px; font-size:18px;
+    color:#fff; box-shadow:0 4px 12px rgba(0,0,0,.15);
+    transition:transform .1s, opacity .1s;
+    text-align:center; line-height:1.3;
+  }
+  .modeBtn:active { transform:scale(.97); }
+  .modeBtn.m1 { background:#e65100; }
+  .modeBtn.m2 { background:#1565c0; }
+  .modeBtn .sub { font-size:0.7rem; font-weight:700; opacity:.8; display:block; margin-top:2px; }
+
+  /* ===== ゲーム画面 ===== */
+  .gameScreen { display:none; }
+  .gameScreen.active { display:block; }
+
+  /* 位テーブル共通 */
+  table.place { width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:10px; }
+  table.place th {
+    font-size:0.85rem; font-weight:700; padding:7px 4px; text-align:center;
+    border-radius:8px 8px 0 0;
+  }
+  th.h { background:var(--h-bg); color:var(--h-fg); }
+  th.t { background:var(--t-bg); color:var(--t-fg); }
+  th.o { background:var(--o-bg); color:var(--o-fg); }
+  table.place td { padding:4px 3px; vertical-align:middle; text-align:center; }
+  td.h { background:var(--h-bg); }
+  td.t { background:var(--t-bg); }
+  td.o { background:var(--o-bg); }
+
+  /* 問題数字（mode1） */
+  .problemNum {
+    text-align:center; margin:4px 0 12px;
+    font-size:3.6rem; font-weight:950; letter-spacing:.06em; color:var(--dark);
+  }
+
+  /* コインエリア */
+  .coinArea { min-height:80px; display:flex; justify-content:center; align-items:flex-end; padding:4px 0; }
+  .coinGroup { display:flex; gap:6%; justify-content:center; align-items:flex-end; }
+  .coinCol { display:flex; flex-direction:column-reverse; align-items:center; gap:3px; flex:0 0 46%; }
+  .coinImg { width:100%; max-width:54px; object-fit:contain; user-select:none; pointer-events:none; }
+  .emptyCoins { color:#bbb; font-size:.85rem; border:2px dashed #ccc; border-radius:10px; padding:5px 8px; }
+
+  /* mode1: +/- ボタン */
+  .coinCtrlBtn {
+    border:0; border-radius:10px; font-weight:950; cursor:pointer;
+    width:100%; padding:6px 0; font-size:1.5rem; line-height:1;
+    background:#e8e8e8; color:var(--dark);
+    transition:background .1s;
+  }
+  .coinCtrlBtn:active { background:#ccc; }
+
+  /* mode2: スピナー */
+  .spinner { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 0; }
+  .spinBtn {
+    border:0; border-radius:8px; font-size:1.4rem; font-weight:900;
+    cursor:pointer; background:#e8e8e8; padding:4px 0; width:100%;
+    line-height:1.2; transition:background .1s;
+  }
+  .spinBtn:active { background:#ccc; }
+  .spinDigit { font-size:2.4rem; font-weight:950; line-height:1.2; color:var(--dark); }
+
+  /* できた！ボタン */
+  .doneBtn {
+    display:block; width:100%; border:0; border-radius:16px; font-weight:950;
+    padding:16px; font-size:22px; cursor:pointer; margin-top:12px;
+    background:var(--dark); color:#fff;
+    box-shadow:0 5px 12px rgba(0,0,0,.18);
+    transition:transform .1s;
+  }
+  .doneBtn:active { transform:scale(.98); }
+
+  /* 結果表示 */
+  .resultArea { text-align:center; min-height:2.8rem; margin-top:8px; }
+  .result { font-size:2rem; font-weight:700; min-height:2rem; }
+  .result.ok { color:var(--ok); }
+  .result.ng { color:var(--ng); }
+
+  @keyframes victory {
+    0%  { transform:scale(0.3); opacity:0; }
+    50% { transform:scale(1.35); opacity:1; }
+    70% { transform:scale(0.92); }
+    100%{ transform:scale(1); opacity:1; }
+  }
+  .result.victory { animation:victory .55s cubic-bezier(.36,.07,.19,.97) both; color:#e8a000; }
+
+  .star { position:fixed; font-size:1.8rem; pointer-events:none; z-index:99; animation:flystar .7s ease-out forwards; }
+  @keyframes flystar {
+    0%  { opacity:1; transform:translate(0,0) scale(1); }
+    100%{ opacity:0; transform:translate(var(--dx),var(--dy)) scale(0.4); }
+  }
+
+  /* 数直線 */
+  .numberLine { margin-top:12px; display:none; }
+  .numberLine.visible { display:block; }
+  .nlTrack {
+    position:relative; height:18px; background:#e8e8e8;
+    border-radius:9px; overflow:hidden; margin-bottom:4px;
+  }
+  .nlBar {
+    position:absolute; left:0; top:0; height:100%;
+    background:#4a9eff; border-radius:9px;
+    width:0%; transition:width .5s ease-out;
+  }
+  .nlLabels {
+    display:flex; justify-content:space-between;
+    font-size:0.65rem; color:#888; padding:0 2px;
+  }
+  .nlValue { text-align:center; font-size:1rem; font-weight:700; color:#4a9eff; margin-top:2px; }
+
+  /* 戻るボタン */
+  .backBtn {
+    border:0; background:none; font-size:0.85rem; color:#888;
+    cursor:pointer; padding:4px 0; margin-bottom:8px;
+    display:flex; align-items:center; gap:4px;
+  }
+  .backBtn:active { opacity:.6; }
+
+  @media (max-width: 480px) {
+    .wrap { padding:6px; }
+    .panel { padding:10px 8px 16px; }
+    .title { font-size:17px; }
+    .problemNum { font-size:2.8rem; }
+    .modeBtn { font-size:16px; padding:15px 16px; }
+    .doneBtn { font-size:19px; padding:14px; }
+    .spinDigit { font-size:2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <div class="titleRow">
+      <p class="title">おかねとすうじ</p>
+      <button id="soundBtn" class="soundBtn" type="button">
+        <span id="soundIcon">🔊</span>
+        <span id="soundLabel">おと ON</span>
+      </button>
+    </div>
+
+    <!-- スタート画面 -->
+    <div class="startScreen" id="startScreen">
+      <p class="startMsg">モードをえらんでね</p>
+      <div class="howto">
+        <p class="howto-title">あそびかた</p>
+        <ul class="howto-steps">
+          <li>
+            <span class="howto-num">①</span>
+            <span><strong>すうじ→おかね</strong>：数字を見て、コインを正しい枚数に合わせよう</span>
+          </li>
+          <li>
+            <span class="howto-num">②</span>
+            <span><strong>おかね→すうじ</strong>：コインを数えて、▲▼で数字を合わせよう</span>
+          </li>
+          <li>
+            <span class="howto-num">③</span>
+            <span>できたら「<strong>できた！</strong>」を押そう</span>
+          </li>
+        </ul>
+      </div>
+      <div class="modeButtons">
+        <button class="modeBtn m1" id="startMode1" type="button">
+          すうじ → おかね
+          <span class="sub">数字を見てコインをならべる</span>
+        </button>
+        <button class="modeBtn m2" id="startMode2" type="button">
+          おかね → すうじ
+          <span class="sub">コインを数えて数字を合わせる</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ゲーム画面（Task 3・4 で中身を追加） -->
+    <div class="gameScreen" id="gameScreen">
+      <button class="backBtn" id="backBtn" type="button">← もどる</button>
+      <!-- mode1 / mode2 の中身は Task 3・4 で挿入 -->
+    </div>
+
+  </div>
+</div>
+
+<script src="logic.js"></script>
+<script>
+  // ===== サウンド =====
+  let soundOn = localStorage.getItem('okaneToSuujiSoundOn') !== 'off';
+  let audioCtx = null;
+  function getCtx() {
+    const Cls = window.AudioContext || window.webkitAudioContext;
+    if (!Cls) return null;
+    if (!audioCtx) audioCtx = new Cls();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function beep({ freq=880, dur=0.08, type='sine', gain=0.03, when=0 }) {
+    if (!soundOn) return;
+    const ctx = getCtx(); if (!ctx) return;
+    const now = ctx.currentTime + when;
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, now);
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.exponentialRampToValueAtTime(gain, now + 0.01);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    osc.connect(amp); amp.connect(ctx.destination);
+    osc.start(now); osc.stop(now + dur + 0.02);
+  }
+  function playTap()     { beep({ freq:440, dur:0.04, gain:0.02 }); }
+  function playVictory() {
+    beep({ freq:880,  dur:0.08, gain:0.035, when:0    });
+    beep({ freq:1100, dur:0.08, gain:0.03,  when:0.09 });
+    beep({ freq:1320, dur:0.12, gain:0.035, when:0.18 });
+  }
+  function playWrong() { beep({ freq:180, dur:0.12, type:'triangle', gain:0.03 }); }
+
+  function updateSoundBtn() {
+    document.getElementById('soundBtn').classList.toggle('off', !soundOn);
+    document.getElementById('soundIcon').textContent = soundOn ? '🔊' : '🔇';
+    document.getElementById('soundLabel').textContent = soundOn ? 'おと ON' : 'おと OFF';
+  }
+  document.getElementById('soundBtn').addEventListener('click', () => {
+    soundOn = !soundOn;
+    localStorage.setItem('okaneToSuujiSoundOn', soundOn ? 'on' : 'off');
+    updateSoundBtn();
+  });
+  updateSoundBtn();
+
+  // ===== 画面切替 =====
+  function showStart() {
+    document.getElementById('startScreen').style.display = '';
+    document.getElementById('gameScreen').classList.remove('active');
+  }
+  function showGame() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameScreen').classList.add('active');
+  }
+
+  document.getElementById('backBtn').addEventListener('click', showStart);
+
+  // モードボタン（Task 3・4 で startGame(mode) を実装）
+  document.getElementById('startMode1').addEventListener('click', () => startGame('mode1'));
+  document.getElementById('startMode2').addEventListener('click', () => startGame('mode2'));
+
+  function startGame(mode) {
+    showGame();
+    // Task 3・4 で実装
+    console.log('startGame:', mode);
+  }
+</script>
+</body>
+</html>

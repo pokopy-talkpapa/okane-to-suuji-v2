@@ -370,19 +370,32 @@
     osc.connect(amp); amp.connect(ctx.destination);
     osc.start(now); osc.stop(now + dur + 0.02);
   }
-  // コイン音MP3（ランダム再生速度）
-  let _coinBuf = null;
-  let _coinBufLoading = false;
+  // ===== サウンド =====
   const COIN_RATES = [0.82, 0.88, 0.94, 1.0, 1.06, 1.12, 1.18];
+  const TAP_URLS = ['sounds/coin.mp3', 'sounds/coin2.mp3', 'sounds/coin3.mp3'];
+  let _tapBufs = [];
+  let _tapBufsStarted = false;
+  let _successBuf = null;
+  let _successBufStarted = false;
 
-  function _loadCoinBuf(ctx) {
-    if (_coinBuf || _coinBufLoading) return;
-    _coinBufLoading = true;
-    fetch('sounds/coin.mp3')
-      .then(r => r.arrayBuffer())
+  function _loadTapBufs(ctx) {
+    if (_tapBufsStarted) return;
+    _tapBufsStarted = true;
+    TAP_URLS.forEach(url =>
+      fetch(url).then(r => r.arrayBuffer())
+        .then(ab => ctx.decodeAudioData(ab))
+        .then(buf => _tapBufs.push(buf))
+        .catch(() => {})
+    );
+  }
+
+  function _loadSuccessBuf(ctx) {
+    if (_successBufStarted) return;
+    _successBufStarted = true;
+    fetch('sounds/coins-success.mp3').then(r => r.arrayBuffer())
       .then(ab => ctx.decodeAudioData(ab))
-      .then(decoded => { _coinBuf = decoded; _coinBufLoading = false; })
-      .catch(() => { _coinBufLoading = false; });
+      .then(buf => { _successBuf = buf; })
+      .catch(() => {});
   }
 
   function _playTapBeep(ctx) {
@@ -402,18 +415,32 @@
   function playTap() {
     if (!soundOn) return;
     const ctx = getCtx(); if (!ctx) return;
-    _loadCoinBuf(ctx);
-    if (_coinBuf) {
+    _loadTapBufs(ctx);
+    _loadSuccessBuf(ctx);
+    if (_tapBufs.length > 0) {
+      const buf = _tapBufs[Math.floor(Math.random() * _tapBufs.length)];
       const src = ctx.createBufferSource();
-      src.buffer = _coinBuf;
+      src.buffer = buf;
       src.playbackRate.value = COIN_RATES[Math.floor(Math.random() * COIN_RATES.length)];
       const gain = ctx.createGain();
       gain.gain.value = 0.7;
       src.connect(gain); gain.connect(ctx.destination);
-      src.start();
+      src.start(0, 0, 0.5);
     } else {
       _playTapBeep(ctx);
     }
+  }
+
+  function playSuccess() {
+    if (!soundOn || !_successBuf) return;
+    const ctx = getCtx(); if (!ctx) return;
+    const src = ctx.createBufferSource();
+    src.buffer = _successBuf;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.75, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
+    src.connect(gain); gain.connect(ctx.destination);
+    src.start(0, 0, 1.5);
   }
   function playVictory() {
     beep({ freq:880,  dur:0.08, gain:0.035, when:0    });
@@ -575,6 +602,7 @@
     resultEl.textContent = '○ せいかい！';
     resultEl.className = 'result victory';
     playVictory();
+    playSuccess();
     launchStars();
     // バー全体を青に
     const prefix = currentMode === 'mode1' ? 'm1' : 'm2';

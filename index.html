@@ -654,7 +654,7 @@
 
     ['H', 'T', 'O'].forEach(p => {
       const area = document.getElementById(prefix + 'Coins' + p);
-      if (area) area.style.visibility = 'hidden';
+      if (area) area.style.opacity = '0';
     });
 
     let doneCount = 0;
@@ -761,26 +761,26 @@
     targetNum = generateProblem(prev);
 
     if (currentMode === 'mode1') {
-      ['H','T','O'].forEach(p => {
-        const a = document.getElementById('m1Coins' + p);
-        if (a) a.style.visibility = '';
-      });
       userCoins = { h: 0, t: 0, o: 0 };
       document.getElementById('m1ProblemNum').textContent = targetNum;
       document.getElementById('m1Result').textContent = '';
       document.getElementById('m1Result').className = 'result';
       resetBar('m1');
       renderMode1();
-    } else {
       ['H','T','O'].forEach(p => {
-        const a = document.getElementById('m2Coins' + p);
-        if (a) a.style.visibility = '';
+        const a = document.getElementById('m1Coins' + p);
+        if (a) a.style.opacity = '';
       });
+    } else {
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
       resetBar('m2');
       renderMode2();
+      ['H','T','O'].forEach(p => {
+        const a = document.getElementById('m2Coins' + p);
+        if (a) a.style.opacity = '';
+      });
     }
   }
 </script>

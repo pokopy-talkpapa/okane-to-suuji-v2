@@ -163,14 +163,17 @@
   /* 数直線 */
   .numberLine { margin-top:12px; }
   .nlTrack {
-    position:relative; height:18px; background:#e8e8e8;
+    height:18px; background:#e8e8e8;
     border-radius:9px; overflow:hidden; margin-bottom:4px;
+    display:flex;
   }
-  .nlBar {
-    position:absolute; left:0; top:0; height:100%;
-    background:#4a9eff; border-radius:9px;
-    width:0%; transition:width .15s ease-out;
+  .nlSeg {
+    height:100%; width:0%;
+    transition:width .15s ease-out, background .35s ease;
   }
+  .nlSegH { background:#f59e0b; }
+  .nlSegT { background:#4a9eff; }
+  .nlSegO { background:#f472b6; }
   .nlLabels {
     display:flex; justify-content:space-between;
     font-size:0.65rem; color:#888; padding:0 2px;
@@ -274,7 +277,11 @@
         <button class="doneBtn" id="m1DoneBtn" type="button">できた！</button>
         <div class="resultArea"><div class="result" id="m1Result"></div></div>
         <div class="numberLine" id="m1NumberLine">
-          <div class="nlTrack"><div class="nlBar" id="m1NlBar"></div></div>
+          <div class="nlTrack">
+            <div class="nlSeg nlSegH" id="m1NlBarH"></div>
+            <div class="nlSeg nlSegT" id="m1NlBarT"></div>
+            <div class="nlSeg nlSegO" id="m1NlBarO"></div>
+          </div>
           <div class="nlLabels"><span>0</span><span>500</span><span>1000</span></div>
           <div class="nlValue" id="m1NlValue"></div>
         </div>
@@ -324,7 +331,11 @@
         <button class="doneBtn" id="m2DoneBtn" type="button">できた！</button>
         <div class="resultArea"><div class="result" id="m2Result"></div></div>
         <div class="numberLine" id="m2NumberLine">
-          <div class="nlTrack"><div class="nlBar" id="m2NlBar"></div></div>
+          <div class="nlTrack">
+            <div class="nlSeg nlSegH" id="m2NlBarH"></div>
+            <div class="nlSeg nlSegT" id="m2NlBarT"></div>
+            <div class="nlSeg nlSegO" id="m2NlBarO"></div>
+          </div>
           <div class="nlLabels"><span>0</span><span>500</span><span>1000</span></div>
           <div class="nlValue" id="m2NlValue"></div>
         </div>
@@ -359,9 +370,22 @@
     osc.connect(amp); amp.connect(ctx.destination);
     osc.start(now); osc.stop(now + dur + 0.02);
   }
-  function playTap() {
-    if (!soundOn) return;
-    const ctx = getCtx(); if (!ctx) return;
+  // コイン音MP3（ランダム再生速度）
+  let _coinBuf = null;
+  let _coinBufLoading = false;
+  const COIN_RATES = [0.82, 0.88, 0.94, 1.0, 1.06, 1.12, 1.18];
+
+  function _loadCoinBuf(ctx) {
+    if (_coinBuf || _coinBufLoading) return;
+    _coinBufLoading = true;
+    fetch('sounds/coin.mp3')
+      .then(r => r.arrayBuffer())
+      .then(ab => ctx.decodeAudioData(ab))
+      .then(decoded => { _coinBuf = decoded; _coinBufLoading = false; })
+      .catch(() => { _coinBufLoading = false; });
+  }
+
+  function _playTapBeep(ctx) {
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const amp = ctx.createGain();
@@ -373,6 +397,23 @@
     amp.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
     osc.connect(amp); amp.connect(ctx.destination);
     osc.start(now); osc.stop(now + 0.15);
+  }
+
+  function playTap() {
+    if (!soundOn) return;
+    const ctx = getCtx(); if (!ctx) return;
+    _loadCoinBuf(ctx);
+    if (_coinBuf) {
+      const src = ctx.createBufferSource();
+      src.buffer = _coinBuf;
+      src.playbackRate.value = COIN_RATES[Math.floor(Math.random() * COIN_RATES.length)];
+      const gain = ctx.createGain();
+      gain.gain.value = 0.7;
+      src.connect(gain); gain.connect(ctx.destination);
+      src.start();
+    } else {
+      _playTapBeep(ctx);
+    }
   }
   function playVictory() {
     beep({ freq:880,  dur:0.08, gain:0.035, when:0    });
@@ -461,16 +502,14 @@
       document.getElementById('m1ProblemNum').textContent = targetNum;
       document.getElementById('m1Result').textContent = '';
       document.getElementById('m1Result').className = 'result';
-      document.getElementById('m1NlBar').style.width = '0%';
-      document.getElementById('m1NlValue').textContent = '';
+      resetBar('m1');
       renderMode1();
     }
     if (mode === 'mode2') {
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
-      document.getElementById('m2NlBar').style.width = '0%';
-      document.getElementById('m2NlValue').textContent = '';
+      resetBar('m2');
       renderMode2();
     }
   }
@@ -537,6 +576,11 @@
     resultEl.className = 'result victory';
     playVictory();
     launchStars();
+    // バー全体を青に
+    const prefix = currentMode === 'mode1' ? 'm1' : 'm2';
+    ['H','T','O'].forEach(p => {
+      document.getElementById(prefix + 'NlBar' + p).style.background = '#4a9eff';
+    });
     setTimeout(nextProblem, 1500);
   }
 
@@ -565,14 +609,30 @@
 
   // ===== ライブ数直線 =====
 
+  function resetBar(prefix) {
+    ['H','T','O'].forEach(p => {
+      const el = document.getElementById(prefix + 'NlBar' + p);
+      el.style.transition = 'none';
+      el.style.width = '0%';
+      el.style.background = '';
+    });
+    document.getElementById(prefix + 'NlValue').textContent = '';
+    // transitionを次フレームで再有効化
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      ['H','T','O'].forEach(p => {
+        document.getElementById(prefix + 'NlBar' + p).style.transition = '';
+      });
+    }));
+  }
+
   function updateLiveBar(mode) {
-    const val = mode === 'mode1'
-      ? coinsToNumber(userCoins)
-      : coinsToNumber(userDigits);
-    const barEl = document.getElementById(mode === 'mode1' ? 'm1NlBar' : 'm2NlBar');
-    const valEl = document.getElementById(mode === 'mode1' ? 'm1NlValue' : 'm2NlValue');
-    barEl.style.width = (val / 1000 * 100).toFixed(2) + '%';
-    valEl.textContent = val > 0 ? val + 'えん' : '';
+    const coins = mode === 'mode1' ? userCoins : userDigits;
+    const prefix = mode === 'mode1' ? 'm1' : 'm2';
+    document.getElementById(prefix + 'NlBarH').style.width = (coins.h * 10).toFixed(1) + '%';
+    document.getElementById(prefix + 'NlBarT').style.width = (coins.t * 1).toFixed(1) + '%';
+    document.getElementById(prefix + 'NlBarO').style.width = (coins.o * 0.1).toFixed(1) + '%';
+    const val = coinsToNumber(coins);
+    document.getElementById(prefix + 'NlValue').textContent = val > 0 ? val + 'えん' : '';
   }
 
   function nextProblem() {
@@ -584,15 +644,13 @@
       document.getElementById('m1ProblemNum').textContent = targetNum;
       document.getElementById('m1Result').textContent = '';
       document.getElementById('m1Result').className = 'result';
-      document.getElementById('m1NlBar').style.width = '0%';
-      document.getElementById('m1NlValue').textContent = '';
+      resetBar('m1');
       renderMode1();
     } else {
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
-      document.getElementById('m2NlBar').style.width = '0%';
-      document.getElementById('m2NlValue').textContent = '';
+      resetBar('m2');
       renderMode2();
     }
   }

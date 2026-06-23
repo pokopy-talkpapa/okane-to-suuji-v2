@@ -370,65 +370,63 @@
     osc.connect(amp); amp.connect(ctx.destination);
     osc.start(now); osc.stop(now + dur + 0.02);
   }
-  // ===== サウンド =====
+
   const COIN_RATES = [0.82, 0.88, 0.94, 1.0, 1.06, 1.12, 1.18];
   const TAP_URLS = ['sounds/coin.mp3', 'sounds/coin2.mp3', 'sounds/coin3.mp3'];
   let _tapBufs = [];
-  let _tapBufsStarted = false;
+  let _tapBufsLoaded = false;
   let _successBuf = null;
-  let _successBufStarted = false;
+  let _successBufLoaded = false;
 
-  function _loadTapBufs(ctx) {
-    if (_tapBufsStarted) return;
-    _tapBufsStarted = true;
-    TAP_URLS.forEach(url =>
-      fetch(url).then(r => r.arrayBuffer())
+  function preloadSounds() {
+    const ctx = getCtx(); if (!ctx) return;
+    if (!_tapBufsLoaded) {
+      _tapBufsLoaded = true;
+      TAP_URLS.forEach(url =>
+        fetch(url).then(r => r.arrayBuffer())
+          .then(ab => ctx.decodeAudioData(ab))
+          .then(buf => _tapBufs.push(buf))
+          .catch(() => {})
+      );
+    }
+    if (!_successBufLoaded) {
+      _successBufLoaded = true;
+      fetch('sounds/coins-success.mp3').then(r => r.arrayBuffer())
         .then(ab => ctx.decodeAudioData(ab))
-        .then(buf => _tapBufs.push(buf))
-        .catch(() => {})
-    );
+        .then(buf => { _successBuf = buf; })
+        .catch(() => {});
+    }
   }
 
-  function _loadSuccessBuf(ctx) {
-    if (_successBufStarted) return;
-    _successBufStarted = true;
-    fetch('sounds/coins-success.mp3').then(r => r.arrayBuffer())
-      .then(ab => ctx.decodeAudioData(ab))
-      .then(buf => { _successBuf = buf; })
-      .catch(() => {});
+  // mode1コイン音：MP3ランダム再生（ロード済みの場合のみ）
+  function playTap() {
+    if (!soundOn || _tapBufs.length === 0) return;
+    const ctx = getCtx(); if (!ctx) return;
+    const buf = _tapBufs[Math.floor(Math.random() * _tapBufs.length)];
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = COIN_RATES[Math.floor(Math.random() * COIN_RATES.length)];
+    const gain = ctx.createGain();
+    gain.gain.value = 0.7;
+    src.connect(gain); gain.connect(ctx.destination);
+    src.start(ctx.currentTime, 0, 0.5);
   }
 
-  function _playTapBeep(ctx) {
+  // mode2スピナー音：小気味よい電子クリック
+  function playSpinTick() {
+    if (!soundOn) return;
+    const ctx = getCtx(); if (!ctx) return;
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const amp = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1400, now);
-    osc.frequency.exponentialRampToValueAtTime(900, now + 0.08);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1800, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.045);
     amp.gain.setValueAtTime(0.0001, now);
-    amp.gain.exponentialRampToValueAtTime(0.09, now + 0.008);
-    amp.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    amp.gain.exponentialRampToValueAtTime(0.07, now + 0.004);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
     osc.connect(amp); amp.connect(ctx.destination);
-    osc.start(now); osc.stop(now + 0.15);
-  }
-
-  function playTap() {
-    if (!soundOn) return;
-    const ctx = getCtx(); if (!ctx) return;
-    _loadTapBufs(ctx);
-    _loadSuccessBuf(ctx);
-    if (_tapBufs.length > 0) {
-      const buf = _tapBufs[Math.floor(Math.random() * _tapBufs.length)];
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.playbackRate.value = COIN_RATES[Math.floor(Math.random() * COIN_RATES.length)];
-      const gain = ctx.createGain();
-      gain.gain.value = 0.7;
-      src.connect(gain); gain.connect(ctx.destination);
-      src.start(0, 0, 0.5);
-    } else {
-      _playTapBeep(ctx);
-    }
+    osc.start(now); osc.stop(now + 0.08);
   }
 
   function playSuccess() {
@@ -440,7 +438,7 @@
     gain.gain.setValueAtTime(0.75, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
     src.connect(gain); gain.connect(ctx.destination);
-    src.start(0, 0, 1.5);
+    src.start(ctx.currentTime, 0, 1.5);
   }
   function playVictory() {
     beep({ freq:880,  dur:0.08, gain:0.035, when:0    });
@@ -518,6 +516,7 @@
 
   function startGame(mode) {
     showGame();
+    preloadSounds(); // モード選択時にMP3を先読みしておく
     currentMode = mode;
     targetNum = generateProblem();
 
@@ -541,7 +540,7 @@
     }
   }
 
-  // mode1: +/- ボタン
+  // mode1: +/- ボタン（+のみコイン音、−は無音）
   document.querySelectorAll('#mode1Screen .coinCtrlBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       const place = btn.dataset.place;
@@ -549,7 +548,7 @@
       const next = userCoins[place] + delta;
       if (next < 0 || next > 9) return;
       userCoins[place] = next;
-      playTap();
+      if (delta > 0) playTap();
       renderMode1();
       updateLiveBar('mode1');
     });
@@ -570,7 +569,7 @@
       const place = btn.dataset.place;
       const delta = parseInt(btn.dataset.delta, 10);
       userDigits[place] = (userDigits[place] + delta + 10) % 10;
-      playTap();
+      playSpinTick();
       document.getElementById(`m2Digit${place.toUpperCase()}`).textContent = userDigits[place];
       updateLiveBar('mode2');
     });
@@ -580,7 +579,7 @@
 
   // ===== Task 5: 正誤判定 + サウンド + 星エフェクト =====
 
-  // Step 1: 星エフェクト関数
+  // 星エフェクト
   function launchStars() {
     const dirs = [[-90,-80],[90,-80],[0,-100],[-120,-40],[120,-40],[-60,-110],[60,-110],[0,-120]];
     const cx = window.innerWidth / 2, cy = window.innerHeight * 0.35;
@@ -597,19 +596,89 @@
     });
   }
 
-  // Step 2: 正誤判定と結果表示
+  // コイン吸い込みアニメーション（mode1専用）
+  function animateCoinAbsorption(prefix, onDone) {
+    const DUR = 320;    // 各コインのアニメ時間(ms)
+    const STAGGER = 40; // コイン間の時間差(ms)
+
+    const coinImgs = [];
+    ['H', 'T', 'O'].forEach(p => {
+      const area = document.getElementById(prefix + 'Coins' + p);
+      if (area) area.querySelectorAll('.coinImg').forEach(img => coinImgs.push(img));
+    });
+
+    if (coinImgs.length === 0) { onDone(); return; }
+
+    const track = document.querySelector('#' + prefix + 'NumberLine .nlTrack');
+    const trackRect = track.getBoundingClientRect();
+    const destX = trackRect.left + 24;
+    const destY = trackRect.top + trackRect.height / 2;
+
+    // 元のコインを隠す
+    ['H', 'T', 'O'].forEach(p => {
+      const area = document.getElementById(prefix + 'Coins' + p);
+      if (area) area.style.visibility = 'hidden';
+    });
+
+    let doneCount = 0;
+    const total = coinImgs.length;
+
+    coinImgs.forEach((img, i) => {
+      const r = img.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+
+      const clone = document.createElement('img');
+      clone.src = img.src;
+      clone.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:${r.width}px;height:${r.height}px;margin-left:${-r.width/2}px;margin-top:${-r.height/2}px;z-index:200;pointer-events:none;transition:none;`;
+      document.body.appendChild(clone);
+
+      setTimeout(() => {
+        clone.style.transition = `transform ${DUR}ms ease-in, opacity ${Math.round(DUR*0.35)}ms ease ${Math.round(DUR*0.65)}ms`;
+        clone.style.transform = `translate(${destX - cx}px,${destY - cy}px) scale(0.15)`;
+        clone.style.opacity = '0';
+      }, i * STAGGER);
+
+      setTimeout(() => {
+        clone.remove();
+        doneCount++;
+        if (doneCount === total) onDone();
+      }, i * STAGGER + DUR + 120);
+    });
+
+    // 最初のコインが着地するタイミングでバーを青に
+    setTimeout(() => {
+      ['H','T','O'].forEach(p => {
+        document.getElementById(prefix + 'NlBar' + p).style.background = '#4a9eff';
+      });
+    }, Math.round(DUR * 0.65));
+  }
+
+  // 正誤判定
   function onCorrect(resultEl) {
     resultEl.textContent = '○ せいかい！';
     resultEl.className = 'result victory';
     playVictory();
-    playSuccess();
     launchStars();
-    // バー全体を青に
+
     const prefix = currentMode === 'mode1' ? 'm1' : 'm2';
-    ['H','T','O'].forEach(p => {
-      document.getElementById(prefix + 'NlBar' + p).style.background = '#4a9eff';
-    });
-    setTimeout(nextProblem, 1500);
+
+    if (currentMode === 'mode1') {
+      // 少し間を置いてコイン吸い込み開始＋成功音
+      setTimeout(() => {
+        playSuccess();
+        animateCoinAbsorption(prefix, () => {
+          setTimeout(nextProblem, 400);
+        });
+      }, 280);
+    } else {
+      // mode2: バー青に変えて次へ
+      ['H','T','O'].forEach(p => {
+        document.getElementById(prefix + 'NlBar' + p).style.background = '#4a9eff';
+      });
+      playSuccess();
+      setTimeout(nextProblem, 1500);
+    }
   }
 
   function onWrong(resultEl) {

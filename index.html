@@ -161,8 +161,7 @@
   }
 
   /* 数直線 */
-  .numberLine { margin-top:12px; display:none; }
-  .numberLine.visible { display:block; }
+  .numberLine { margin-top:12px; }
   .nlTrack {
     position:relative; height:18px; background:#e8e8e8;
     border-radius:9px; overflow:hidden; margin-bottom:4px;
@@ -170,7 +169,7 @@
   .nlBar {
     position:absolute; left:0; top:0; height:100%;
     background:#4a9eff; border-radius:9px;
-    width:0%; transition:width .5s ease-out;
+    width:0%; transition:width .15s ease-out;
   }
   .nlLabels {
     display:flex; justify-content:space-between;
@@ -360,7 +359,21 @@
     osc.connect(amp); amp.connect(ctx.destination);
     osc.start(now); osc.stop(now + dur + 0.02);
   }
-  function playTap()     { beep({ freq:440, dur:0.04, gain:0.02 }); }
+  function playTap() {
+    if (!soundOn) return;
+    const ctx = getCtx(); if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1400, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.08);
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.exponentialRampToValueAtTime(0.09, now + 0.008);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    osc.connect(amp); amp.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.15);
+  }
   function playVictory() {
     beep({ freq:880,  dur:0.08, gain:0.035, when:0    });
     beep({ freq:1100, dur:0.08, gain:0.03,  when:0.09 });
@@ -448,14 +461,16 @@
       document.getElementById('m1ProblemNum').textContent = targetNum;
       document.getElementById('m1Result').textContent = '';
       document.getElementById('m1Result').className = 'result';
-      document.getElementById('m1NumberLine').classList.remove('visible');
+      document.getElementById('m1NlBar').style.width = '0%';
+      document.getElementById('m1NlValue').textContent = '';
       renderMode1();
     }
     if (mode === 'mode2') {
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
-      document.getElementById('m2NumberLine').classList.remove('visible');
+      document.getElementById('m2NlBar').style.width = '0%';
+      document.getElementById('m2NlValue').textContent = '';
       renderMode2();
     }
   }
@@ -470,6 +485,7 @@
       userCoins[place] = next;
       playTap();
       renderMode1();
+      updateLiveBar('mode1');
     });
   });
 
@@ -490,6 +506,7 @@
       userDigits[place] = (userDigits[place] + delta + 10) % 10;
       playTap();
       document.getElementById(`m2Digit${place.toUpperCase()}`).textContent = userDigits[place];
+      updateLiveBar('mode2');
     });
   });
 
@@ -515,13 +532,12 @@
   }
 
   // Step 2: 正誤判定と結果表示
-  function onCorrect(resultEl, numberLineId, barId, valueId) {
+  function onCorrect(resultEl) {
     resultEl.textContent = '○ せいかい！';
     resultEl.className = 'result victory';
     playVictory();
     launchStars();
-    // 数直線アニメ（Task 6 で実装。今は呼ぶだけ）
-    showNumberLine(numberLineId, barId, valueId, targetNum);
+    setTimeout(nextProblem, 1500);
   }
 
   function onWrong(resultEl) {
@@ -534,12 +550,12 @@
     if (mode === 'mode1') {
       const correct = checkAnswer(userCoins, targetNum);
       const resultEl = document.getElementById('m1Result');
-      if (correct) onCorrect(resultEl, 'm1NumberLine', 'm1NlBar', 'm1NlValue');
+      if (correct) onCorrect(resultEl);
       else onWrong(resultEl);
     } else {
       const correct = checkAnswer(userDigits, targetNum);
       const resultEl = document.getElementById('m2Result');
-      if (correct) onCorrect(resultEl, 'm2NumberLine', 'm2NlBar', 'm2NlValue');
+      if (correct) onCorrect(resultEl);
       else onWrong(resultEl);
     }
   }
@@ -547,86 +563,16 @@
   document.getElementById('m1DoneBtn').addEventListener('click', () => handleDone('mode1'));
   document.getElementById('m2DoneBtn').addEventListener('click', () => handleDone('mode2'));
 
-  // ===== Task 6: 数直線アニメーション + 次問題 =====
+  // ===== ライブ数直線 =====
 
-  function showNumberLine(nlId, barId, valueId, value) {
-    const nlEl  = document.getElementById(nlId);
-    const barEl = document.getElementById(barId);
-    const valEl = document.getElementById(valueId);
-
-    // 数直線を先に表示（コインが飛ぶ先の位置を取得するため）
-    barEl.style.transition = 'none';
-    barEl.style.width = '0%';
-    nlEl.classList.add('visible');
-    valEl.textContent = '';
-
-    const trackEl = nlEl.querySelector('.nlTrack');
-    const trackRect = trackEl.getBoundingClientRect();
-    const targetX = trackRect.left + trackRect.width * (value / 1000);
-    const targetY = trackRect.top + trackRect.height / 2;
-
-    // 現在のモードのコイン画像を収集
-    const coinAreaIds = currentMode === 'mode1'
-      ? ['m1CoinsH', 'm1CoinsT', 'm1CoinsO']
-      : ['m2CoinsH', 'm2CoinsT', 'm2CoinsO'];
-
-    const coinImages = coinAreaIds.flatMap(id =>
-      Array.from(document.querySelectorAll(`#${id} .coinImg`))
-    );
-
-    // コイン全着地までの時間を計算して nextProblem タイミングを決める
-    const allCoinsMs = coinImages.length > 0
-      ? (coinImages.length - 1) * 28 + 400 + 200
-      : 0;
-
-    function growBar() {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        barEl.style.transition = 'width 0.5s ease-out';
-        barEl.style.width = (value / 1000 * 100).toFixed(2) + '%';
-        valEl.textContent = value + 'えん';
-      }));
-      setTimeout(() => {
-        nlEl.classList.remove('visible');
-        barEl.style.transition = 'none';
-        barEl.style.width = '0%';
-        nextProblem();
-      }, Math.max(800, allCoinsMs));
-    }
-
-    if (coinImages.length === 0) {
-      growBar();
-      return;
-    }
-
-    // コインと同時にバーを伸ばし始める
-    growBar();
-
-    coinImages.forEach((img, i) => {
-      const rect = img.getBoundingClientRect();
-      const clone = document.createElement('img');
-      clone.src = img.src;
-      clone.style.cssText = [
-        'position:fixed', 'pointer-events:none', 'z-index:200',
-        `left:${rect.left}px`, `top:${rect.top}px`,
-        `width:${rect.width}px`, `height:${rect.height}px`,
-      ].join(';');
-      document.body.appendChild(clone);
-
-      setTimeout(() => {
-        clone.style.transition = [
-          'left 0.35s ease-in',
-          'top 0.35s ease-in',
-          'transform 0.35s ease-in',
-          'opacity 0.25s ease-in 0.12s',
-        ].join(',');
-        clone.style.left      = targetX + 'px';
-        clone.style.top       = targetY + 'px';
-        clone.style.transform = 'scale(0.1)';
-        clone.style.opacity   = '0';
-      }, i * 28);
-
-      setTimeout(() => { clone.remove(); }, i * 28 + 400);
-    });
+  function updateLiveBar(mode) {
+    const val = mode === 'mode1'
+      ? coinsToNumber(userCoins)
+      : coinsToNumber(userDigits);
+    const barEl = document.getElementById(mode === 'mode1' ? 'm1NlBar' : 'm2NlBar');
+    const valEl = document.getElementById(mode === 'mode1' ? 'm1NlValue' : 'm2NlValue');
+    barEl.style.width = (val / 1000 * 100).toFixed(2) + '%';
+    valEl.textContent = val > 0 ? val + 'えん' : '';
   }
 
   function nextProblem() {
@@ -638,11 +584,15 @@
       document.getElementById('m1ProblemNum').textContent = targetNum;
       document.getElementById('m1Result').textContent = '';
       document.getElementById('m1Result').className = 'result';
+      document.getElementById('m1NlBar').style.width = '0%';
+      document.getElementById('m1NlValue').textContent = '';
       renderMode1();
     } else {
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
+      document.getElementById('m2NlBar').style.width = '0%';
+      document.getElementById('m2NlValue').textContent = '';
       renderMode2();
     }
   }

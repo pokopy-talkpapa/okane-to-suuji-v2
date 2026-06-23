@@ -524,13 +524,11 @@
       el.innerHTML = '<span class="emptyCoins">０まい</span>';
       return;
     }
+    // コインは常に固定ステップで積み上がる（1枚目から重なる・サイズ・間隔は変化しない）
+    // STEP=19px → 9枚で 40+19×8=192px ちょうどエリアに収まる
     const COIN_SIZE = 40;
-    const AREA_H = 192; // coinArea(200px) - padding(4px*2)
-    const colLen = Math.min(count, 5);
-    // 収まらない場合はコインを重ねる（サイズは変えない）
-    const overlapPerCoin = colLen > 1
-      ? Math.ceil(Math.max(0, colLen * COIN_SIZE - AREA_H) / (colLen - 1))
-      : 0;
+    const STEP = 19;
+    const OVERLAP = COIN_SIZE - STEP; // = 21px 常に重なる量
 
     const group = document.createElement('div');
     group.className = 'coinGroup';
@@ -544,9 +542,7 @@
         img.className = 'coinImg';
         img.src = coinSrc;
         img.alt = '';
-        if (i > 0) {
-          img.style.marginTop = (overlapPerCoin > 0 ? -overlapPerCoin : 2) + 'px';
-        }
+        if (i > 0) img.style.marginTop = `-${OVERLAP}px`;
         if (onRemove) {
           img.classList.add('removable');
           img.addEventListener('click', onRemove);

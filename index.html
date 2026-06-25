@@ -306,9 +306,24 @@
     <div class="gameScreen" id="gameScreen">
       <button class="backBtn" id="backBtn" type="button">← もどる</button>
 
+      <!-- ストリーク表示 -->
+      <div id="streakDisplay" style="text-align:center; margin-bottom:6px; min-height:2rem;">
+        <span id="streakFire" style="font-size:1.3rem; font-weight:950; color:#e65100; display:none;">
+          🔥 <span id="streakNum">0</span> れんぞくせいかい
+        </span>
+      </div>
+
       <!-- mode1: すうじ→おかね -->
       <div id="mode1Screen" style="display:none">
         <div class="problemNum" id="m1ProblemNum">438</div>
+        <div style="text-align:center; margin-bottom:10px;">
+          <button id="m1SpeakBtn" type="button"
+            style="border:0; border-radius:14px; background:#fff3e0; color:#e65100;
+                   font-size:1rem; font-weight:900; padding:10px 22px; cursor:pointer;
+                   box-shadow:0 2px 8px rgba(0,0,0,.1);">
+            🔊 もう一度聞く
+          </button>
+        </div>
         <table class="place">
           <thead>
             <tr>
@@ -602,8 +617,42 @@
   });
   updateSoundBtn();
 
+  // ===== 音声読み上げ =====
+  function speakNumber(num) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(String(num));
+    utter.lang = 'ja-JP';
+    utter.rate = 0.85;
+    window.speechSynthesis.speak(utter);
+  }
+  function speakIfOn(num) { if (soundOn) speakNumber(num); }
+
+  // ===== ストリーク =====
+  let streak = 0;
+  let bestStreak = parseInt(localStorage.getItem('okaneStreakBest') || '0', 10);
+
+  function updateStreakDisplay() {
+    document.getElementById('streakNum').textContent = streak;
+    document.getElementById('streakFire').style.display = streak > 0 ? '' : 'none';
+  }
+  function onStreakCorrect() {
+    streak++;
+    if (streak > bestStreak) {
+      bestStreak = streak;
+      localStorage.setItem('okaneStreakBest', bestStreak);
+    }
+    updateStreakDisplay();
+  }
+  function onStreakWrong() {
+    streak = 0;
+    updateStreakDisplay();
+  }
+
   // ===== 画面切替 =====
   function showStart() {
+    streak = 0;
+    updateStreakDisplay();
     document.getElementById('startScreen').style.display = '';
     document.getElementById('gameScreen').classList.remove('active');
   }
@@ -700,6 +749,7 @@
     document.getElementById('mode2Screen').style.display = mode === 'mode2' ? '' : 'none';
     document.getElementById('mode3Screen').style.display = mode === 'mode3' ? '' : 'none';
     document.getElementById('m3ResultScreen').style.display = 'none';
+    document.getElementById('streakDisplay').style.display = (mode === 'mode1' || mode === 'mode2') ? '' : 'none';
 
     if (mode === 'mode1') {
       userCoins = { h: 0, t: 0, o: 0 };
@@ -708,6 +758,7 @@
       document.getElementById('m1Result').className = 'result';
       resetBar('m1');
       renderMode1();
+      speakIfOn(targetNum);
     }
     if (mode === 'mode2') {
       userDigits = { h: 0, t: 0, o: 0 };
@@ -884,6 +935,7 @@
   }
 
   function onCorrect(resultEl) {
+    onStreakCorrect();
     resultEl.textContent = '○ せいかい！';
     resultEl.className = 'result victory';
     playVictory();
@@ -900,6 +952,7 @@
   }
 
   function onWrong(resultEl) {
+    onStreakWrong();
     resultEl.textContent = '× もういちど';
     resultEl.className = 'result ng';
     playWrong();
@@ -948,6 +1001,7 @@
     }
   }
 
+  document.getElementById('m1SpeakBtn').addEventListener('click', () => speakNumber(targetNum));
   document.getElementById('m1DoneBtn').addEventListener('click', () => handleDone('mode1'));
   document.getElementById('m2DoneBtn').addEventListener('click', () => handleDone('mode2'));
   document.getElementById('m3DoneBtn').addEventListener('click', () => handleDone('mode3'));
@@ -995,6 +1049,7 @@
         const a = document.getElementById('m1Coins' + p);
         if (a) a.style.opacity = '';
       });
+      speakIfOn(targetNum);
     } else if (currentMode === 'mode2') {
       userDigits = { h: 0, t: 0, o: 0 };
       document.getElementById('m2Result').textContent = '';

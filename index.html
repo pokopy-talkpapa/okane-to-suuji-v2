@@ -138,15 +138,26 @@
   }
   .doneBtn:active { transform:scale(.98); }
 
-  /* mode2: スピナー */
-  .spinner { display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 0; }
-  .spinBtn {
-    border:0; border-radius:8px; font-size:1.4rem; font-weight:900;
-    cursor:pointer; background:#e8e8e8; padding:4px 0; width:100%;
-    line-height:1.2; transition:background .1s;
+  /* mode2: テンキー */
+  .m2InputDisplay {
+    text-align:center; font-size:3.6rem; font-weight:950;
+    letter-spacing:.08em; color:var(--dark);
+    margin:4px 0 12px; min-height:4.4rem; line-height:1.2;
   }
-  .spinBtn:active { background:#ccc; }
-  .spinDigit { font-size:2.4rem; font-weight:950; line-height:1.2; color:var(--dark); }
+  .m2InputDisplay.placeholder { color:#bbb; }
+  .tenkey {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+    margin-bottom:10px;
+  }
+  .tkBtn {
+    border:0; border-radius:14px; font-size:1.5rem; font-weight:900;
+    padding:16px 0; cursor:pointer;
+    background:#f0f0f0; color:var(--dark);
+    transition:background .08s, transform .08s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tkBtn:active { background:#d8d8d8; transform:scale(.93); }
+  .tkDel { background:#ffe0d0; color:#c0392b; font-size:1.1rem; }
 
   /* 結果表示 */
   .resultArea { text-align:center; min-height:2.8rem; margin-top:8px; }
@@ -508,31 +519,23 @@
               <td><div class="coinArea" id="m2CoinsT"></div></td>
               <td><div class="coinArea" id="m2CoinsO"></div></td>
             </tr>
-            <tr>
-              <td>
-                <div class="spinner">
-                  <button class="spinBtn" data-place="h" data-delta="1">▲</button>
-                  <div class="spinDigit" id="m2DigitH">0</div>
-                  <button class="spinBtn" data-place="h" data-delta="-1">▼</button>
-                </div>
-              </td>
-              <td>
-                <div class="spinner">
-                  <button class="spinBtn" data-place="t" data-delta="1">▲</button>
-                  <div class="spinDigit" id="m2DigitT">0</div>
-                  <button class="spinBtn" data-place="t" data-delta="-1">▼</button>
-                </div>
-              </td>
-              <td>
-                <div class="spinner">
-                  <button class="spinBtn" data-place="o" data-delta="1">▲</button>
-                  <div class="spinDigit" id="m2DigitO">0</div>
-                  <button class="spinBtn" data-place="o" data-delta="-1">▼</button>
-                </div>
-              </td>
-            </tr>
           </tbody>
         </table>
+        <div class="m2InputDisplay placeholder" id="m2InputDisplay">＿＿＿</div>
+        <div class="tenkey">
+          <button class="tkBtn" data-val="7" type="button">7</button>
+          <button class="tkBtn" data-val="8" type="button">8</button>
+          <button class="tkBtn" data-val="9" type="button">9</button>
+          <button class="tkBtn" data-val="4" type="button">4</button>
+          <button class="tkBtn" data-val="5" type="button">5</button>
+          <button class="tkBtn" data-val="6" type="button">6</button>
+          <button class="tkBtn" data-val="1" type="button">1</button>
+          <button class="tkBtn" data-val="2" type="button">2</button>
+          <button class="tkBtn" data-val="3" type="button">3</button>
+          <button class="tkBtn tkDel" id="m2DelBtn" type="button">DEL</button>
+          <button class="tkBtn" data-val="0" type="button">0</button>
+          <button class="tkBtn" style="visibility:hidden" type="button"></button>
+        </div>
         <button class="doneBtn" id="m2DoneBtn" type="button">できた！</button>
         <div class="resultArea"><div class="result" id="m2Result"></div></div>
         <div class="numberLine" id="m2NumberLine">
@@ -834,6 +837,7 @@
   let targetNum   = 0;
   let userCoins   = { h: 0, t: 0, o: 0 };
   let userDigits  = { h: 0, t: 0, o: 0 };
+  let m2InputStr  = '';
 
   // ===== mode3専用状態 =====
   let m3Timer    = null;
@@ -922,10 +926,12 @@
     }
     if (mode === 'mode2') {
       userDigits = { h: 0, t: 0, o: 0 };
+      m2InputStr = '';
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
       resetBar('m2');
       renderMode2();
+      m2UpdateDisplay();
     }
     if (mode === 'mode3') {
       if (m3Timer) { clearInterval(m3Timer); m3Timer = null; }
@@ -1001,20 +1007,36 @@
     renderCoinArea(document.getElementById('m2CoinsH'), COIN_SRC.h, digits.h);
     renderCoinArea(document.getElementById('m2CoinsT'), COIN_SRC.t, digits.t);
     renderCoinArea(document.getElementById('m2CoinsO'), COIN_SRC.o, digits.o);
-    document.getElementById('m2DigitH').textContent = userDigits.h;
-    document.getElementById('m2DigitT').textContent = userDigits.t;
-    document.getElementById('m2DigitO').textContent = userDigits.o;
   }
 
-  document.querySelectorAll('#mode2Screen .spinBtn').forEach(btn => {
+  function m2UpdateDisplay() {
+    const el = document.getElementById('m2InputDisplay');
+    if (m2InputStr === '') {
+      el.textContent = '＿＿＿';
+      el.classList.add('placeholder');
+    } else {
+      el.textContent = m2InputStr;
+      el.classList.remove('placeholder');
+    }
+    const val = parseInt(m2InputStr || '0', 10);
+    userDigits = { h: Math.floor(val / 100), t: Math.floor(val / 10) % 10, o: val % 10 };
+    updateLiveBar('mode2');
+  }
+
+  document.querySelectorAll('#mode2Screen .tkBtn[data-val]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const place = btn.dataset.place;
-      const delta = parseInt(btn.dataset.delta, 10);
-      userDigits[place] = (userDigits[place] + delta + 10) % 10;
+      if (m2InputStr.length >= 3) return;
+      if (m2InputStr === '' && btn.dataset.val === '0') return;
+      m2InputStr += btn.dataset.val;
       playCoinTick();
-      document.getElementById(`m2Digit${place.toUpperCase()}`).textContent = userDigits[place];
-      updateLiveBar('mode2');
+      m2UpdateDisplay();
     });
+  });
+  document.getElementById('m2DelBtn').addEventListener('click', () => {
+    if (m2InputStr.length === 0) return;
+    m2InputStr = m2InputStr.slice(0, -1);
+    playDeleteCoin();
+    m2UpdateDisplay();
   });
 
   // ===== 正誤判定 + サウンド + 星エフェクト =====
@@ -1133,7 +1155,8 @@
       if (correct) onCorrect(resultEl);
       else onWrong(resultEl);
     } else if (mode === 'mode2') {
-      const correct = checkAnswer(userDigits, targetNum);
+      const inputVal = parseInt(m2InputStr || '0', 10);
+      const correct = inputVal === targetNum;
       const resultEl = document.getElementById('m2Result');
       if (correct) onCorrect(resultEl);
       else onWrong(resultEl);
@@ -1212,10 +1235,12 @@
       speakIfOn(targetNum);
     } else if (currentMode === 'mode2') {
       userDigits = { h: 0, t: 0, o: 0 };
+      m2InputStr = '';
       document.getElementById('m2Result').textContent = '';
       document.getElementById('m2Result').className = 'result';
       resetBar('m2');
       renderMode2();
+      m2UpdateDisplay();
       ['H','T','O'].forEach(p => {
         const a = document.getElementById('m2Coins' + p);
         if (a) a.style.opacity = '';

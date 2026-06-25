@@ -237,6 +237,65 @@
   }
   .m3RetryBtn:active { transform:scale(.97); }
 
+  /* ===== チュートリアル ===== */
+  .tutorialScreen {
+    display:none;
+    flex-direction:column; align-items:center;
+    padding:20px 16px 32px; gap:0;
+  }
+  .tutorialScreen.active { display:flex; }
+  .tutorialSlide { display:none; width:100%; text-align:center; }
+  .tutorialSlide.active { display:block; }
+  .tutorialIcon { font-size:3.5rem; margin-bottom:10px; line-height:1; }
+  .tutorialTitle {
+    font-size:1.25rem; font-weight:950; margin:0 0 14px;
+    color:var(--dark); letter-spacing:.02em;
+  }
+  .tutorialDesc {
+    font-size:1rem; line-height:1.75; color:#333;
+    background:#f5f7fa; border-radius:14px; padding:14px 16px;
+    margin:0 0 20px; text-align:left;
+  }
+  .tutorialDemo {
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    background:#fff8f0; border-radius:14px; padding:14px 20px;
+    margin-bottom:20px; border:2px solid #ffe0c0;
+  }
+  .tutorialDemoArrow { font-size:1.6rem; }
+  .tutorialDemoImg { width:52px; height:52px; object-fit:contain; }
+  .tutorialDemoCoin {
+    width:52px; height:52px;
+    background:#e65100; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:0.75rem; font-weight:900;
+  }
+  .tutorialNav {
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    margin-top:4px; width:100%;
+  }
+  .tutorialNextBtn {
+    border:0; border-radius:16px; font-weight:950; cursor:pointer;
+    padding:16px 36px; font-size:18px;
+    color:#fff; background:var(--dark);
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
+    transition:transform .1s;
+  }
+  .tutorialNextBtn:active { transform:scale(.97); }
+  .tutorialDots { display:flex; gap:8px; margin-top:12px; }
+  .tutorialDot {
+    width:10px; height:10px; border-radius:50%; background:#ddd;
+    transition:background .2s;
+  }
+  .tutorialDot.active { background:var(--dark); }
+  .tutorialHowtoBtn {
+    border:0; border-radius:14px; font-weight:900; cursor:pointer;
+    padding:12px 24px; font-size:0.95rem;
+    color:#555; background:#f0f0f0;
+    transition:transform .1s, background .1s;
+    width:100%;
+  }
+  .tutorialHowtoBtn:active { background:#ddd; transform:scale(.98); }
+
   @media (max-width: 480px) {
     .wrap { padding:6px; }
     .panel { padding:10px 8px 16px; }
@@ -265,31 +324,10 @@
     <!-- スタート画面 -->
     <div class="startScreen" id="startScreen">
       <p class="startMsg">モードをえらんでね</p>
-      <div class="howto">
-        <p class="howto-title">あそびかた</p>
-        <ul class="howto-steps">
-          <li>
-            <span class="howto-num">①</span>
-            <span><strong>すうじ→おかね</strong>：数字を見て、コインを正しい枚数に合わせよう</span>
-          </li>
-          <li>
-            <span class="howto-num">②</span>
-            <span><strong>おかね→すうじ</strong>：コインを数えて、▲▼で数字を合わせよう</span>
-          </li>
-          <li>
-            <span class="howto-num">③</span>
-            <span><strong>れんぞく</strong>：30びょうで何もんせいかいできるかな？コインはそのまま残るよ</span>
-          </li>
-          <li>
-            <span class="howto-num">④</span>
-            <span>できたら「<strong>できた！</strong>」を押そう</span>
-          </li>
-        </ul>
-      </div>
       <div class="modeButtons">
         <button class="modeBtn m1" id="startMode1" type="button">
-          すうじ → おかね
-          <span class="sub">数字を見てコインをならべる</span>
+          きいてコインをならべる
+          <span class="sub">音を聞いて、コインを正しい枚数に合わせよう</span>
         </button>
         <button class="modeBtn m2" id="startMode2" type="button">
           おかね → すうじ
@@ -299,6 +337,89 @@
           れんぞく（30びょう）
           <span class="sub">コインを足したり引いたりしながらチャレンジ</span>
         </button>
+      </div>
+      <button class="tutorialHowtoBtn" id="openTutorialBtn" type="button">📖 あそびかたを見る</button>
+    </div>
+
+    <!-- チュートリアル画面 -->
+    <div class="tutorialScreen" id="tutorialScreen">
+      <!-- スライド1: コインのふやしかた -->
+      <div class="tutorialSlide active" id="tSlide1">
+        <div class="tutorialIcon">💰</div>
+        <p class="tutorialTitle">コインのふやしかた</p>
+        <p class="tutorialDesc">
+          下のボタンをタップすると、<br>
+          コインが <strong>1まい増える</strong> よ！<br><br>
+          100円・10円・1円の<br>
+          それぞれのボタンがあるよ。
+        </p>
+        <div class="tutorialDemo">
+          <img class="tutorialDemoImg" src="imgs/money_100.png" alt="100円">
+          <div class="tutorialDemoArrow">→</div>
+          <div style="font-size:2rem">+1まい</div>
+        </div>
+      </div>
+
+      <!-- スライド2: コインのへらしかた -->
+      <div class="tutorialSlide" id="tSlide2">
+        <div class="tutorialIcon">👆</div>
+        <p class="tutorialTitle">コインのへらしかた</p>
+        <p class="tutorialDesc">
+          ならんでいるコインを<br>
+          <strong>タップすると1まい減る</strong> よ！<br><br>
+          多くなりすぎたら<br>
+          コインを直接タップしてね。
+        </p>
+        <div class="tutorialDemo" style="flex-direction:column; gap:8px;">
+          <div style="font-size:1.5rem">コインを<strong>タップ</strong></div>
+          <div class="tutorialDemoArrow">↓</div>
+          <div style="font-size:1.5rem">1まい減る</div>
+        </div>
+      </div>
+
+      <!-- スライド3: できた！で判定 -->
+      <div class="tutorialSlide" id="tSlide3">
+        <div class="tutorialIcon">✅</div>
+        <p class="tutorialTitle">「できた！」で判定</p>
+        <p class="tutorialDesc">
+          コインをならべたら<br>
+          <strong>「できた！」</strong> を押そう。<br><br>
+          あっていたら <span style="color:#0f8a2b; font-weight:900;">○ せいかい！</span><br>
+          ちがっていたら <span style="color:#e0453a; font-weight:900;">× もういちど</span> がでるよ。
+        </p>
+        <div class="tutorialDemo" style="background:#fff0f0; border-color:#ffc0c0;">
+          <div style="background:#111; color:#fff; border-radius:12px; padding:12px 24px; font-size:1.2rem; font-weight:950;">できた！</div>
+        </div>
+      </div>
+
+      <!-- スライド4: れんぞくモードのひみつ -->
+      <div class="tutorialSlide" id="tSlide4">
+        <div class="tutorialIcon">🔗</div>
+        <p class="tutorialTitle">れんぞくモードのひみつ</p>
+        <p class="tutorialDesc">
+          正解しても<strong>コインはそのまま残る</strong>よ！<br><br>
+          次の問題を見て、<br>
+          <strong>変わった数字の分だけ</strong><br>
+          足したり引いたりしよう。<br><br>
+          全部を一からやりなおさなくて<br>
+          いいんだよ！
+        </p>
+        <div class="tutorialDemo" style="background:#f0fff0; border-color:#c0f0c0;">
+          <div style="font-size:1.1rem; font-weight:700; text-align:left; line-height:1.8;">
+            321 → 421<br>
+            <span style="color:#555; font-size:0.9rem;">100円コインを1まい増やすだけ！</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tutorialNav">
+        <button class="tutorialNextBtn" id="tutorialNextBtn" type="button">つぎへ →</button>
+      </div>
+      <div class="tutorialDots">
+        <div class="tutorialDot active" id="tDot1"></div>
+        <div class="tutorialDot" id="tDot2"></div>
+        <div class="tutorialDot" id="tDot3"></div>
+        <div class="tutorialDot" id="tDot4"></div>
       </div>
     </div>
 
@@ -664,6 +785,41 @@
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameScreen').classList.add('active');
   }
+
+  // ===== チュートリアル =====
+  const TUTORIAL_TOTAL = 4;
+  let tutorialPage = 1;
+
+  function showTutorialPage(n) {
+    tutorialPage = n;
+    for (let i = 1; i <= TUTORIAL_TOTAL; i++) {
+      document.getElementById('tSlide' + i).classList.toggle('active', i === n);
+      document.getElementById('tDot' + i).classList.toggle('active', i === n);
+    }
+    const nextBtn = document.getElementById('tutorialNextBtn');
+    nextBtn.textContent = n < TUTORIAL_TOTAL ? 'つぎへ →' : 'とじる';
+    nextBtn.style.background = n < TUTORIAL_TOTAL ? 'var(--dark)' : '#e65100';
+  }
+
+  function openTutorial() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('tutorialScreen').classList.add('active');
+    showTutorialPage(1);
+  }
+
+  function closeTutorial() {
+    document.getElementById('tutorialScreen').classList.remove('active');
+    document.getElementById('startScreen').style.display = '';
+  }
+
+  document.getElementById('openTutorialBtn').addEventListener('click', openTutorial);
+  document.getElementById('tutorialNextBtn').addEventListener('click', () => {
+    if (tutorialPage < TUTORIAL_TOTAL) {
+      showTutorialPage(tutorialPage + 1);
+    } else {
+      closeTutorial();
+    }
+  });
 
   document.getElementById('backBtn').addEventListener('click', () => {
     if (m3Timer) { clearInterval(m3Timer); m3Timer = null; }

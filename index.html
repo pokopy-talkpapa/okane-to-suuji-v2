@@ -315,12 +315,16 @@
 
       <!-- mode1: すうじ→おかね -->
       <div id="mode1Screen" style="display:none">
-        <div class="problemNum" id="m1ProblemNum">438</div>
-        <div style="text-align:center; margin-bottom:10px;">
+        <div class="problemNum" id="m1ProblemNum" style="display:none">438</div>
+        <div style="text-align:center; padding:20px 0 18px;">
+          <div style="font-size:0.85rem; color:#999; font-weight:700; margin-bottom:14px; letter-spacing:.04em;">
+            🎧 きいてね
+          </div>
           <button id="m1SpeakBtn" type="button"
-            style="border:0; border-radius:14px; background:#fff3e0; color:#e65100;
-                   font-size:1rem; font-weight:900; padding:10px 22px; cursor:pointer;
-                   box-shadow:0 2px 8px rgba(0,0,0,.1);">
+            style="border:0; border-radius:20px; background:#e65100; color:#fff;
+                   font-size:1.2rem; font-weight:900; padding:16px 36px; cursor:pointer;
+                   box-shadow:0 4px 14px rgba(230,81,0,.35);
+                   transition:transform .1s, opacity .1s;">
             🔊 もう一度聞く
           </button>
         </div>
@@ -486,7 +490,7 @@
 <script src="logic.js"></script>
 <script>
   // ===== サウンド =====
-  let soundOn = localStorage.getItem('okaneToSuujiSoundOn') !== 'off';
+  let soundOn = localStorage.getItem('okaneToSuujiV2SoundOn') !== 'off';
   let audioCtx = null;
 
   let _successBuf = null;
@@ -612,7 +616,7 @@
   }
   document.getElementById('soundBtn').addEventListener('click', () => {
     soundOn = !soundOn;
-    localStorage.setItem('okaneToSuujiSoundOn', soundOn ? 'on' : 'off');
+    localStorage.setItem('okaneToSuujiV2SoundOn', soundOn ? 'on' : 'off');
     updateSoundBtn();
   });
   updateSoundBtn();
